@@ -103,5 +103,9 @@ aws iam create-access-key --user-name test-user
 1. **Detection**: CloudTrail captured the risky API call.
 <img width="974" height="526" alt="image" src="https://github.com/user-attachments/assets/9984eefe-f6b4-4c61-8ed2-acd75066ab74" />
 
+---
+
 2. **Alerting**: The security team immediately received an SNS alert detailing the compromise.
 <img width="974" height="526" alt="image" src="https://github.com/user-attachments/assets/85c49bd5-d4ff-44ac-bd06-6c376cae52e4" />
+
+---

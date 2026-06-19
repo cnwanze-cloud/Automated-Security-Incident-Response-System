@@ -1,125 +1,107 @@
 # 🔐 Automated Security Incident Response System (AWS)
 
-## 📌 Overview
-
-This project implements a **serverless security incident response system** on AWS that automatically detects suspicious IAM activity and responds in real time.
-
-It simulates a basic **Security Operations Center (SOC) automation pipeline**, where AWS services work together to monitor, analyze, and respond to potential security threats.
+An event-driven, serverless Security Operations Center (SOC) automation system designed to monitor AWS infrastructure for high-risk IAM configuration changes or compromised credentials, dispatch real-time alerts, and execute automated remediation to enforce account security.
 
 ---
 
-## 🚨 Problem Statement
+## 🏗️ Architecture Overview
 
-In cloud environments, malicious or accidental IAM actions (such as creating access keys or modifying policies) can lead to serious security breaches.
+The system uses an event-driven design to ensure sub-second response times between threat detection and mitigation, completely eliminating the need for manual intervention or persistent polling servers.
 
-This system automates the detection and response process to reduce human delay and improve security posture.
+<img width="2720" height="2000" alt="architecture" src="https://github.com/user-attachments/assets/37b6a060-d35b-402d-bd97-d370549c1016" />
 
----
-
-## 🏗️ Architecture
-<img width="2720" height="2000" alt="image" src="https://github.com/user-attachments/assets/d58b0c8a-f807-415d-bb04-285e82a20c1c" />
-
-### Flow Description:
-
-1. **AWS CloudTrail** logs all IAM and account activity  
-2. **Amazon EventBridge** filters suspicious events  
-3. **AWS Lambda** processes and analyzes events  
-4. **Amazon SNS** sends real-time alerts  
-5. **AWS IAM** automatically disables compromised access keys (optional response action)
+1. **Ingestion:** All account activity and API requests are captured by **AWS CloudTrail**.
+2. **Filtering:** **Amazon EventBridge** monitors the CloudTrail log stream for specific high-risk API operations.
+3. **Orchestration:** Upon matching a rule, EventBridge asynchronously triggers an **AWS Lambda** function containing the response logic.
+4. **Notification:** The Lambda function extracts event metadata and publishes a critical notification payload to **Amazon SNS**, alerting the security team.
+5. **Remediation:** Concurrently, Lambda interfaces with the **AWS IAM** API to instantly deactivate the compromised access keys.
 
 ---
 
-## ☁️ AWS Services Used
+## 🧰 Tech Stack & AWS Services
 
-- AWS CloudTrail – API activity logging  
-- Amazon EventBridge – Event routing and filtering  
-- AWS Lambda – Serverless automation logic  
-- Amazon SNS – Security notifications  
-- AWS IAM – Identity and access management  
-
----
-
-## ⚙️ Features
-
-- Real-time detection of suspicious IAM activity  
-- Automated incident response workflow  
-- Email alerting system for security events  
-- Optional automatic deactivation of compromised access keys  
-- Fully serverless and scalable architecture  
+* **Cloud Platform:** Amazon Web Services (AWS)
+* **Log Management:** AWS CloudTrail & Amazon S3
+* **Event Broker:** Amazon EventBridge (CloudWatch Events)
+* **Compute / Logic:** AWS Lambda (Python 3.x / Boto3)
+* **Notification System:** Amazon SNS (Simple Notification Service)
+* **Identity Management:** AWS IAM (Identity and Access Management)
 
 ---
 
-## 🚨 Detected Security Events
+## 🚨 Monitored Indicators of Compromise (IoCs)
 
-The system monitors and responds to:
+The EventBridge rule is configured via an event pattern to target risky, administrative, or unauthorized account modifications:
 
-- `CreateAccessKey`
-- `AttachUserPolicy`
-- `PutUserPolicy`
-- `DeactivateMFADevice`
-
----
-
-## 🧪 Testing the System
-
-### Option 1: AWS Console
-
-1. Create an IAM test user  
-2. Generate an access key  
-3. Observe CloudTrail event logging  
-4. EventBridge triggers Lambda automatically  
-5. SNS sends alert email  
+```json
+{
+  "source": ["aws.iam"],
+  "detail-type": ["AWS API Call via CloudTrail"],
+  "detail": {
+    "eventName": [
+      "CreateAccessKey",
+      "AttachUserPolicy",
+      "PutUserPolicy",
+      "DeactivateMFADevice"
+    ]
+  }
+}
+```
 
 ---
 
-### Option 2: AWS CLI
+## 🛠️ Deployment & Configuration Guide
+
+### Step 1: Enable Account-Wide Auditing
+1. Navigate to the **AWS CloudTrail** console and select **Create Trail**.
+2. Configure the following parameters:
+   * **Trail name:** `security-trail`
+   * **Apply to all regions:** Enabled (`True`)
+   * **Storage:** Create a new S3 bucket (e.g., `security-logs-bucket-[UNIQUE_ID]`)
+   * **Log events:** Management events (`Read` + `Write`)
+
+### Step 2: Establish the Alerting Topology
+1. Open the **Amazon SNS** console and create a new **Standard Topic** named `security-alerts`.
+2. Copy the generated **Topic ARN** for subsequent environment configuration.
+3. Create a **Subscription** within the topic:
+   * **Protocol:** `Email`
+   * **Endpoint:** `your-security-team-email@domain.com`
+4. Confirm the subscription via the automated verification email sent to your inbox.
+
+### Step 3: Configure the Least-Privilege Execution Role
+1. Navigate to **IAM** ➔ **Roles** ➔ **Create Role** and select **Lambda** as the trusted entity.
+2. Attach permissions following a zero-trust model:
+   * `AWSLambdaBasicExecutionRole` (for CloudWatch logging)
+   * A scoped inline policy granting `sns:Publish` for your specific topic ARN, and `iam:ListAccessKeys` / `iam:UpdateAccessKey` to allow account-wide credential isolation.
+3. Name the role `SecurityIncidentLambdaRole`.
+
+### Step 4: Deploy the Serverless Response Engine
+1. Create a new **AWS Lambda** function named `SecurityIncidentResponder`.
+2. Set the runtime to **Python 3.x** and select the existing execution role created in Step 3.
+3. Deploy the core automated response logic provided in the `/src` directory of this repository (ensure you replace `YOUR_SNS_TOPIC_ARN` with your actual SNS ARN).
+
+### Step 5: Wire the Event Pipeline
+1. Open **Amazon EventBridge** and select **Rules** ➔ **Create Rule**.
+2. Define the rule name as `security-incident-rule` and set the event source to **AWS events**.
+3. Paste the JSON pattern defined in the *Monitored Indicators of Compromise* section.
+4. Set the Target routing engine to point directly to the `SecurityIncidentResponder` Lambda function.
+
+---
+
+## 🧪 Validation & Testing Framework
+
+To safely simulate an adversarial credential creation event, execute the following command via the AWS CLI using a non-root administrative identity:
 
 ```bash
 aws iam create-access-key --user-name test-user
 ```
-This generates a CloudTrail event that triggers the security pipeline.
 
 ---
 
-📂 Lambda Function Logic
+### Verification
 
-The Lambda function performs:
+1. **Detection**: CloudTrail captured the risky API call.
+<img width="974" height="526" alt="image" src="https://github.com/user-attachments/assets/9984eefe-f6b4-4c61-8ed2-acd75066ab74" />
 
-* Event parsing
-* Risk analysis
-* SNS notification
-* IAM access key deactivation (if risky event detected)
-
----
-
-🔐 Security Considerations
-* IAM permissions should follow least privilege principle
-* SNS topic access should be restricted
-* CloudTrail should be enabled across all regions
-* Logs should be monitored using CloudWatch
-
----
-
-📊 Skills Demonstrated
-* Cloud security automation
-* Event-driven architecture
-* Serverless computing (AWS Lambda)
-* Incident response design
-* IAM security management
-* Real-world SOC workflow simulation
-
----
-
-🚀 Future Improvements
-* Slack/Discord integration for alerts
-* Integration with AWS GuardDuty
-* Machine learning-based anomaly detection
-* Centralized security dashboard (CloudWatch / QuickSight)
-* Multi-account AWS security monitoring
-
----
-
-👨‍💻 Author
-
-Chigozie Nwanze
-Cloud Engineer
+2. **Alerting**: The security team immediately received an SNS alert detailing the compromise.
+<img width="974" height="526" alt="image" src="https://github.com/user-attachments/assets/85c49bd5-d4ff-44ac-bd06-6c376cae52e4" />

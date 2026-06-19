@@ -57,7 +57,7 @@ The EventBridge rule is configured via an event pattern to target risky, adminis
 2. Configure the following parameters:
    * **Trail name:** `security-trail`
    * **Apply to all regions:** Enabled (`True`)
-   * **Storage:** Create a new S3 bucket (e.g., `security-logs-bucket-[UNIQUE_ID]`)
+   * **Storage:** Create a new S3 bucket (e.g., `security-logs-bucket123`)
    * **Log events:** Management events (`Read` + `Write`)
 
 ### Step 2: Establish the Alerting Topology
@@ -77,13 +77,13 @@ The EventBridge rule is configured via an event pattern to target risky, adminis
 
 ### Step 4: Deploy the Serverless Response Engine
 1. Create a new **AWS Lambda** function named `SecurityIncidentResponder`.
-2. Set the runtime to **Python 3.x** and select the existing execution role created in Step 3.
-3. Deploy the core automated response logic provided in the `/src` directory of this repository (ensure you replace `YOUR_SNS_TOPIC_ARN` with your actual SNS ARN).
+2. Set the runtime to **Python 3.14** and select the existing execution role created in Step 3.
+3. Deploy the core automated response logic provided in the `/src` directory of this repository.
 
 ### Step 5: Wire the Event Pipeline
 1. Open **Amazon EventBridge** and select **Rules** ➔ **Create Rule**.
 2. Define the rule name as `security-incident-rule` and set the event source to **AWS events**.
-3. Paste the JSON pattern defined in the *Monitored Indicators of Compromise* section.
+3. Paste the JSON pattern defined in the *event bridge* section.
 4. Set the Target routing engine to point directly to the `SecurityIncidentResponder` Lambda function.
 
 ---

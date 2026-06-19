@@ -1,0 +1,65 @@
+# =========================
+# AWS / Credentials
+# =========================
+.aws/
+credentials
+config
+
+# Do NOT commit AWS keys or local auth files
+*.pem
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# =========================
+# Lambda packaging
+# =========================
+*.zip
+
+# Temporary build files
+build/
+dist/
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Terraform (if using IaC)
+# =========================
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# =========================
+# Local test outputs
+# =========================
+output.json
+test-output.txt
